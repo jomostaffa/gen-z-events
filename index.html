@@ -2,13 +2,13 @@
 
 
 HTML icon
-index-v2
+index-v3
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gen-Z Events</title>
+  <title>نظام إدارة وتذاكر الحفلات | EventGate</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -20,15 +20,15 @@ index-v2
 
   <div class="max-w-5xl mx-auto p-4 md:p-6">
     <!-- Header -->
-    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
+    <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
       <div>
         <h1 class="text-2xl md:text-3xl font-extrabold text-emerald-400">EventGate | نظام تذاكر الحفلات</h1>
         <p class="text-slate-400 text-sm mt-1">توليد QR فريد • دخول لمرة واحدة • تسجيل وقت المسح • إرسال واتساب نظيف</p>
       </div>
-      <div class="flex flex-wrap gap-2">
-        <button onclick="switchTab('scanner')" id="tab-scanner" class="px-4 py-2 rounded-xl font-bold bg-emerald-600 text-white">بوابة المسح (Scanner)</button>
-        <button onclick="switchTab('create')" id="tab-create" class="px-4 py-2 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">إصدار تذاكر / واتساب</button>
-        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">السجل والـ Reset</button>
+      <div class="flex flex-nowrap items-center gap-2 shrink-0 overflow-x-auto">
+        <button onclick="switchTab('scanner')" id="tab-scanner" class="px-3.5 py-2 rounded-xl font-bold bg-emerald-600 text-white text-sm whitespace-nowrap">بوابة المسح (Scanner)</button>
+        <button onclick="switchTab('create')" id="tab-create" class="px-3.5 py-2 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm whitespace-nowrap">إصدار تذاكر / واتساب</button>
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-3.5 py-2 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm whitespace-nowrap">السجل والـ Reset</button>
       </div>
     </header>
 
@@ -47,7 +47,7 @@ index-v2
     <section id="section-scanner" class="space-y-6">
       <div class="grid md:grid-cols-2 gap-6">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h2 class="text-lg font-bold mb-3 text-emerald-400">كاميرا فحص التذاكر</h2>
+          <h2 class="text-lg font-bold mb-3 text-emerald-400">Camera</h2>
           <div id="reader" class="w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 min-h-[260px]"></div>
           <div class="flex gap-3 mt-4">
             <button onclick="startScanner()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl">تشغيل الكاميرا</button>
@@ -76,7 +76,7 @@ index-v2
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
           <h2 class="text-lg font-bold text-emerald-400">سحب البيانات من رسالة واتساب</h2>
           <p class="text-xs text-slate-400">الصق رسالة العميل من واتساب (الاسم، الرقم، الفئة، العدد) وسيقوم النظام بتعبئة الحقول تلقائياً:</p>
-          <textarea id="waRawText" rows="5" placeholder="مثال:&#10;الاسم: Youssef Mostafa&#10;الموبايل: 201001234567&#10;الفئة: لاونج / VIP / جولد / سيلفر&#10;العدد: 2" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200"></textarea>
+          <textarea id="waRawText" rows="5" placeholder="مثال:&#10;الاسم: Youssef Mostafa&#10;الموبايل: 01001234567&#10;الفئة: لاونج / VIP / جولد / سيلفر&#10;العدد: 2" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200"></textarea>
           <button onclick="parseWhatsAppMessage()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-2.5 rounded-xl border border-slate-700">
             استخراج البيانات من الرسالة
           </button>
@@ -90,8 +90,8 @@ index-v2
             <input id="custName" type="text" placeholder="Youssef Mostafa" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
           </div>
           <div>
-            <label class="block text-xs text-slate-400 mb-1">رقم الواتساب (بالكود الدولي مثل 2010...)</label>
-            <input id="custPhone" type="text" placeholder="201000000000" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
+            <label class="block text-xs text-slate-400 mb-1">رقم الواتساب</label>
+            <input id="custPhone" type="text" placeholder="01000000000" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -188,6 +188,16 @@ index-v2
       return TIER_LABELS[tier] || tier || 'Silver';
     }
 
+    function normalizeWhatsAppPhone(rawPhone) {
+      let digits = String(rawPhone || '').replace(/[^\d]/g, '');
+      if (!digits) return '';
+      if (digits.startsWith('00')) digits = digits.slice(2);
+      if (digits.startsWith('01') && digits.length === 11) {
+        digits = '20' + digits.slice(1);
+      }
+      return digits;
+    }
+
     document.getElementById('gasUrl').value = localStorage.getItem(GAS_KEY) || '';
 
     function saveGasUrl() {
@@ -206,8 +216,8 @@ index-v2
         document.getElementById('section-' + t).classList.toggle('hidden', t !== tab);
         const btn = document.getElementById('tab-' + t);
         btn.className = t === tab
-          ? 'px-4 py-2 rounded-xl font-bold bg-emerald-600 text-white'
-          : 'px-4 py-2 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700';
+          ? 'px-3.5 py-2 rounded-xl font-bold bg-emerald-600 text-white text-sm whitespace-nowrap'
+          : 'px-3.5 py-2 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm whitespace-nowrap';
       });
       if (tab === 'dashboard') renderTable();
     }
@@ -218,7 +228,11 @@ index-v2
 
       const phoneMatch = text.match(/(\+?\d[\d\s-]{8,15})/);
       if (phoneMatch) {
-        document.getElementById('custPhone').value = phoneMatch[1].replace(/[^\d]/g, '');
+        let extracted = phoneMatch[1].replace(/[^\d]/g, '');
+        if (extracted.startsWith('201') && extracted.length === 12) {
+          extracted = '0' + extracted.slice(2);
+        }
+        document.getElementById('custPhone').value = extracted;
       }
 
       if (/(?:lounge|لاونج)/i.test(text)) document.getElementById('ticketType').value = 'Lounge';
@@ -269,7 +283,7 @@ index-v2
       const ticket = tickets.find(t => t.id === ticketId);
       if (!ticket) return;
 
-      const cleanPhone = String(ticket.phone || '').replace(/[^\d]/g, '');
+      const waPhone = normalizeWhatsAppPhone(ticket.phone);
       const qrUrl = getQrUrl(ticket.id);
       const tierDisplay = formatTier(ticket.type);
 
@@ -282,9 +296,9 @@ index-v2
         `رابط الـ QR Code الخاص بدخولك:\n` +
         `${qrUrl}`;
 
-      const waLink = cleanPhone
-        ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
-        : `https://wa.me/?text=${encodeURIComponent(message)}`;
+      const waLink = waPhone
+        ? `https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(message)}`
+        : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 
       window.open(waLink, '_blank', 'noopener,noreferrer');
     }
@@ -493,3 +507,4 @@ index-v2
   </script>
 </body>
 </html>
+Analyzing
