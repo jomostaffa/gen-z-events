@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظام إدارة وتذاكر الحفلات | EventGate</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Cairo', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+  <div class="max-w-5xl mx-auto p-4 md:p-6">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-emerald-400">EventGate | نظام تذاكر الحفلات</h1>
+        <p class="text-slate-400 text-sm mt-1">توليد QR فريد • دخول لمرة واحدة • تسجيل وقت المسح • إرسال واتساب نظيف</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="switchTab('scanner')" id="tab-scanner" class="px-4 py-2 rounded-xl font-bold bg-emerald-600 text-white">بوابة المسح (Scanner)</button>
+        <button onclick="switchTab('create')" id="tab-create" class="px-4 py-2 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">إصدار تذاكر / واتساب</button>
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">السجل والـ Reset</button>
+      </div>
+    </header>
+
+    <!-- Optional Google Apps Script Sync Bar -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-6 flex flex-col md:flex-row gap-3 items-center justify-between">
+      <div class="w-full md:w-2/3">
+        <label class="block text-xs text-slate-400 mb-1">رابط Google Apps Script (اختياري لمزامنة أكتر من موبايل على البوابة):</label>
+        <input id="gasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500" />
+      </div>
+      <button onclick="saveGasUrl()" class="w-full md:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold rounded-xl text-sm border border-slate-700">
+        حفظ الرابط
+      </button>
+    </div>
+
+    <!-- SECTION 1: SCANNER -->
+    <section id="section-scanner" class="space-y-6">
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h2 class="text-lg font-bold mb-3 text-emerald-400">كاميرا فحص التذاكر</h2>
+          <div id="reader" class="w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 min-h-[260px]"></div>
+          <div class="flex gap-3 mt-4">
+            <button onclick="startScanner()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl">تشغيل الكاميرا</button>
+            <button onclick="stopScanner()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-xl">إيقاف</button>
+          </div>
+          <div class="mt-4 pt-4 border-t border-slate-800">
+            <label class="block text-xs text-slate-400 mb-1">أو أدخل كود التذكرة يدوياً:</label>
+            <div class="flex gap-2">
+              <input id="manualCode" type="text" placeholder="مثال: EVT-8907" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm uppercase" />
+              <button onclick="verifyTicket(document.getElementById('manualCode').value)" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-sm">فحص</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scan Result Card -->
+        <div id="scanResultBox" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-center items-center text-center min-h-[320px]">
+          <div class="text-slate-500 text-sm">في انتظار مسح كود QR أو إدخال رقم التذكرة...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: CREATE / WHATSAPP PARSER -->
+    <section id="section-create" class="hidden space-y-6">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- WhatsApp Text Parser -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+          <h2 class="text-lg font-bold text-emerald-400">سحب البيانات من رسالة واتساب</h2>
+          <p class="text-xs text-slate-400">الصق رسالة العميل من واتساب (الاسم، الرقم، الفئة، العدد) وسيقوم النظام بتعبئة الحقول تلقائياً:</p>
+          <textarea id="waRawText" rows="5" placeholder="مثال:&#10;الاسم: Youssef Mostafa&#10;الموبايل: 201001234567&#10;الفئة: VIP&#10;العدد: 2" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200"></textarea>
+          <button onclick="parseWhatsAppMessage()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-2.5 rounded-xl border border-slate-700">
+            استخراج البيانات من الرسالة
+          </button>
+        </div>
+
+        <!-- Ticket Generator Form -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+          <h2 class="text-lg font-bold text-emerald-400">بيانات التذكرة</h2>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">اسم العميل</label>
+            <input id="custName" type="text" placeholder="Youssef Mostafa" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">رقم الواتساب (بالكود الدولي مثل 2010...)</label>
+            <input id="custPhone" type="text" placeholder="201000000000" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">فئة التذكرة</label>
+              <select id="ticketType" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm">
+                <option value="Regular">Regular</option>
+                <option value="VIP">VIP</option>
+                <option value="Backstage">Backstage</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">عدد التذاكر</label>
+              <input id="ticketQty" type="number" min="1" max="20" value="1" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <button onclick="generateTickets()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl mt-2">
+            توليد التذاكر والـ QR Code
+          </button>
+        </div>
+      </div>
+
+      <!-- Newly Generated Tickets -->
+      <div id="generatedContainer" class="grid sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- SECTION 3: DASHBOARD & RESET -->
+    <section id="section-dashboard" class="hidden space-y-5">
+      <div class="grid grid-cols-3 gap-4 text-center">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+          <div class="text-xs text-slate-400">إجمالي التذاكر</div>
+          <div id="statTotal" class="text-2xl font-extrabold text-white mt-1">0</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+          <div class="text-xs text-slate-400">تم الدخول (Used)</div>
+          <div id="statUsed" class="text-2xl font-extrabold text-rose-400 mt-1">0</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+          <div class="text-xs text-slate-400">متاح (Valid)</div>
+          <div id="statValid" class="text-2xl font-extrabold text-emerald-400 mt-1">0</div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap justify-between items-center gap-3 bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <button onclick="resetAllTickets()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-sm">
+          عمل Reset لكل التذاكر قبل الحفلة
+        </button>
+        <button onclick="exportCSV()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-sm border border-slate-700">
+          تصدير Excel / CSV
+        </button>
+      </div>
+
+      <div class="overflow-x-auto bg-slate-900 border border-slate-800 rounded-2xl">
+        <table class="w-full text-sm text-right">
+          <thead class="bg-slate-800/70 text-slate-300">
+            <tr>
+              <th class="p-3">كود التذكرة</th>
+              <th class="p-3">الاسم</th>
+              <th class="p-3">الموبايل</th>
+              <th class="p-3">الفئة</th>
+              <th class="p-3">الحالة</th>
+              <th class="p-3">وقت الدخول</th>
+              <th class="p-3">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="ticketsTableBody" class="divide-y divide-slate-800"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'eventgate_tickets_v2';
+    const GAS_KEY = 'eventgate_gas_url';
+    let tickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let html5QrCode = null;
+    let isScanningLocked = false;
+
+    document.getElementById('gasUrl').value = localStorage.getItem(GAS_KEY) || '';
+
+    function saveGasUrl() {
+      const url = document.getElementById('gasUrl').value.trim();
+      localStorage.setItem(GAS_KEY, url);
+      alert('تم حفظ رابط Google Apps Script بنجاح');
+    }
+
+    function saveTickets() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+      renderTable();
+    }
+
+    function switchTab(tab) {
+      ['scanner', 'create', 'dashboard'].forEach(t => {
+        document.getElementById('section-' + t).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById('tab-' + t);
+        btn.className = t === tab
+          ? 'px-4 py-2 rounded-xl font-bold bg-emerald-600 text-white'
+          : 'px-4 py-2 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700';
+      });
+      if (tab === 'dashboard') renderTable();
+    }
+
+    function parseWhatsAppMessage() {
+      const text = document.getElementById('waRawText').value;
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+      const phoneMatch = text.match(/(\+?\d[\d\s-]{8,15})/);
+      if (phoneMatch) {
+        document.getElementById('custPhone').value = phoneMatch[1].replace(/[^\d]/g, '');
+      }
+
+      if (/vip/i.test(text)) document.getElementById('ticketType').value = 'VIP';
+      else if (/backstage/i.test(text)) document.getElementById('ticketType').value = 'Backstage';
+      else document.getElementById('ticketType').value = 'Regular';
+
+      const qtyMatch = text.match(/(?:العدد|qty|count|تذاكر)[:\s-]*(\d+)/i);
+      if (qtyMatch) document.getElementById('ticketQty').value = qtyMatch[1];
+
+      const nameLine = lines.find(l => /(?:الاسم|name)/i.test(l)) || lines[0] || '';
+      const cleanName = nameLine.replace(/^(?:الاسم|name)[:\s-]*/i, '').trim();
+      if (cleanName) document.getElementById('custName').value = cleanName;
+    }
+
+    function generateTickets() {
+      const name = document.getElementById('custName').value.trim() || 'ضيف الحفلة';
+      const phone = document.getElementById('custPhone').value.replace(/[^\d]/g, '');
+      const type = document.getElementById('ticketType').value;
+      const qty = Math.max(1, parseInt(document.getElementById('ticketQty').value || '1', 10));
+
+      const container = document.getElementById('generatedContainer');
+      container.innerHTML = '';
+
+      for (let i = 0; i < qty; i++) {
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+        const id = `EVT-${randomNum}`;
+        const ticket = {
+          id,
+          name,
+          phone,
+          type,
+          status: 'Valid',
+          scanTime: ''
+        };
+        tickets.unshift(ticket);
+        container.appendChild(createTicketCard(ticket));
+      }
+      saveTickets();
+    }
+
+    function getQrUrl(ticketId) {
+      return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(ticketId)}`;
+    }
+
+    function sendTicketToWhatsApp(ticketId) {
+      const ticket = tickets.find(t => t.id === ticketId);
+      if (!ticket) return;
+
+      const cleanPhone = String(ticket.phone || '').replace(/[^\d]/g, '');
+      const qrUrl = getQrUrl(ticket.id);
+
+      const message =
+        `أهلاً بك يا ${ticket.name}\n` +
+        `تم تأكيد حجز تذكرتك بنجاح!\n\n` +
+        `كود التذكرة: ${ticket.id}\n` +
+        `الفئة: ${ticket.type}\n` +
+        `ملاحظة: هذه التذكرة صالحة للدخول مرة واحدة فقط.\n\n` +
+        `رابط الـ QR Code الخاص بدخولك:\n` +
+        `${qrUrl}`;
+
+      const waLink = cleanPhone
+        ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
+        : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+      window.open(waLink, '_blank', 'noopener,noreferrer');
+    }
+
+    function createTicketCard(ticket) {
+      const div = document.createElement('div');
+      div.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center space-y-3';
+      const qrUrl = getQrUrl(ticket.id);
+
+      div.innerHTML = `
+        <div class="text-xs font-bold text-emerald-400">${ticket.type}</div>
+        <div class="text-lg font-extrabold">${ticket.name}</div>
+        <div class="font-mono text-sm text-slate-300 bg-slate-950 py-1 rounded-lg">${ticket.id}</div>
+        <img src="${qrUrl}" alt="${ticket.id}" class="w-40 h-40 mx-auto rounded-xl bg-white p-2" />
+        <div class="flex gap-2 pt-2">
+          <button onclick="sendTicketToWhatsApp('${ticket.id}')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl">
+            إرسال واتساب
+          </button>
+          <a href="${qrUrl}" download="${ticket.id}.png" target="_blank" class="px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-xl">
+            QR
+          </a>
+        </div>
+      `;
+      return div;
+    }
+
+    async function startScanner() {
+      try {
+        if (!html5QrCode) {
+          html5QrCode = new Html5Qrcode('reader');
+        }
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          (decodedText) => {
+            if (isScanningLocked) return;
+            isScanningLocked = true;
+            verifyTicket(decodedText);
+            setTimeout(() => { isScanningLocked = false; }, 2200);
+          },
+          () => {}
+        );
+      } catch (err) {
+        alert('تعذر فتح الكاميرا. تأكد من فتح الصفحة على رابط HTTPS والسماح بصلاحية الكاميرا في المتصفح.');
+      }
+    }
+
+    async function stopScanner() {
+      if (html5QrCode && html5QrCode.isScanning) {
+        await html5QrCode.stop();
+      }
+    }
+
+    function playBeep(success) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.type = success ? 'sine' : 'sawtooth';
+        osc.frequency.value = success ? 880 : 220;
+        osc.connect(ctx.destination);
+        osc.start();
+        setTimeout(() => osc.stop(), success ? 180 : 400);
+      } catch (_) {}
+    }
+
+    async function verifyTicket(rawCode) {
+      const code = String(rawCode || '').trim().toUpperCase();
+      if (!code) return;
+
+      const gasUrl = localStorage.getItem(GAS_KEY);
+      if (gasUrl) {
+        try {
+          const res = await fetch(`${gasUrl}?action=scan&ticket_id=${encodeURIComponent(code)}`);
+          const data = await res.json();
+          if (data.status === 'ALLOWED') {
+            playBeep(true);
+            showScanResult('allowed', data.ticket_id, data.name, data.type, data.scan_time);
+          } else if (data.status === 'ALREADY_USED') {
+            playBeep(false);
+            showScanResult('used', data.ticket_id, data.name, data.type, data.scan_time);
+          } else {
+            playBeep(false);
+            showScanResult('not_found', code);
+          }
+          return;
+        } catch (e) {}
+      }
+
+      const ticket = tickets.find(t => t.id.toUpperCase() === code);
+      if (!ticket) {
+        playBeep(false);
+        showScanResult('not_found', code);
+        return;
+      }
+
+      if (ticket.status === 'Used') {
+        playBeep(false);
+        showScanResult('used', ticket.id, ticket.name, ticket.type, ticket.scanTime);
+        return;
+      }
+
+      const nowStr = new Date().toLocaleString('ar-EG');
+      ticket.status = 'Used';
+      ticket.scanTime = nowStr;
+      saveTickets();
+      playBeep(true);
+      showScanResult('allowed', ticket.id, ticket.name, ticket.type, nowStr);
+    }
+
+    function showScanResult(state, id, name = '', type = '', scanTime = '') {
+      const box = document.getElementById('scanResultBox');
+      if (state === 'allowed') {
+        box.className = 'bg-emerald-950/70 border-2 border-emerald-500 rounded-2xl p-6 flex flex-col justify-center items-center text-center min-h-[320px]';
+        box.innerHTML = `
+          <div class="text-4xl font-extrabold text-emerald-400 mb-2">مسموح بالدخول</div>
+          <div class="text-xl font-bold text-white">${name}</div>
+          <div class="text-sm text-emerald-300 mt-1">${id} • ${type}</div>
+          <div class="mt-4 bg-slate-950/80 px-4 py-2 rounded-xl text-xs text-slate-300">وقت الدخول: ${scanTime}</div>
+        `;
+      } else if (state === 'used') {
+        box.className = 'bg-rose-950/80 border-2 border-rose-500 rounded-2xl p-6 flex flex-col justify-center items-center text-center min-h-[320px]';
+        box.innerHTML = `
+          <div class="text-3xl font-extrabold text-rose-400 mb-2">مرفوض — مستخدمة مسبقاً!</div>
+          <div class="text-lg font-bold text-white">${name} (${id})</div>
+          <div class="mt-4 bg-slate-950/80 px-4 py-2 rounded-xl text-xs text-rose-200">تم الدخول بها في: ${scanTime}</div>
+        `;
+      } else {
+        box.className = 'bg-amber-950/70 border-2 border-amber-500 rounded-2xl p-6 flex flex-col justify-center items-center text-center min-h-[320px]';
+        box.innerHTML = `
+          <div class="text-2xl font-extrabold text-amber-400 mb-2">تذكرة غير مسجلة</div>
+          <div class="font-mono text-sm text-slate-300">${id}</div>
+        `;
+      }
+    }
+
+    async function resetOneTicket(id) {
+      const gasUrl = localStorage.getItem(GAS_KEY);
+      if (gasUrl) {
+        await fetch(`${gasUrl}?action=reset_one&ticket_id=${encodeURIComponent(id)}`);
+      }
+      const t = tickets.find(item => item.id === id);
+      if (t) {
+        t.status = 'Valid';
+        t.scanTime = '';
+        saveTickets();
+      }
+    }
+
+    async function resetAllTickets() {
+      if (!confirm('هل أنت متأكد من إعادة ضبط كل التذاكر إلى Valid قبل الحفلة؟')) return;
+      const gasUrl = localStorage.getItem(GAS_KEY);
+      if (gasUrl) {
+        await fetch(`${gasUrl}?action=reset_all`);
+      }
+      tickets = tickets.map(t => ({ ...t, status: 'Valid', scanTime: '' }));
+      saveTickets();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('ticketsTableBody');
+      tbody.innerHTML = '';
+      let usedCount = 0;
+
+      tickets.forEach(t => {
+        if (t.status === 'Used') usedCount++;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-3 font-mono font-bold">${t.id}</td>
+          <td class="p-3">${t.name}</td>
+          <td class="p-3">${t.phone || '-'}</td>
+          <td class="p-3">${t.type}</td>
+          <td class="p-3">
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${t.status === 'Used' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}">
+              ${t.status}
+            </span>
+          </td>
+          <td class="p-3 text-xs text-slate-400">${t.scanTime || '-'}</td>
+          <td class="p-3 flex gap-2">
+            <button onclick="sendTicketToWhatsApp('${t.id}')" class="px-2.5 py-1 bg-emerald-600/20 text-emerald-400 rounded-lg text-xs font-bold">واتساب</button>
+            <button onclick="resetOneTicket('${t.id}')" class="px-2.5 py-1 bg-amber-600/20 text-amber-400 rounded-lg text-xs font-bold">Reset</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('statTotal').textContent = tickets.length;
+      document.getElementById('statUsed').textContent = usedCount;
+      document.getElementById('statValid').textContent = tickets.length - usedCount;
+    }
+
+    function exportCSV() {
+      const rows = [['Ticket_ID', 'Name', 'Phone', 'Type', 'Status', 'Scan_Time']];
+      tickets.forEach(t => rows.push([t.id, t.name, t.phone, t.type, t.status, t.scanTime]));
+      const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'event-tickets.csv';
+      link.click();
+    }
+
+    renderTable();
+  </script>
+</body>
+</html>
