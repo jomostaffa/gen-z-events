@@ -1,9 +1,14 @@
+
+
+
+HTML icon
+index-v2
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gen-Z Events</title>
+  <title>نظام إدارة وتذاكر الحفلات | EventGate</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -42,7 +47,7 @@
     <section id="section-scanner" class="space-y-6">
       <div class="grid md:grid-cols-2 gap-6">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h2 class="text-lg font-bold mb-3 text-emerald-400">Camera</h2>
+          <h2 class="text-lg font-bold mb-3 text-emerald-400">كاميرا فحص التذاكر</h2>
           <div id="reader" class="w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 min-h-[260px]"></div>
           <div class="flex gap-3 mt-4">
             <button onclick="startScanner()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl">تشغيل الكاميرا</button>
@@ -71,7 +76,7 @@
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
           <h2 class="text-lg font-bold text-emerald-400">سحب البيانات من رسالة واتساب</h2>
           <p class="text-xs text-slate-400">الصق رسالة العميل من واتساب (الاسم، الرقم، الفئة، العدد) وسيقوم النظام بتعبئة الحقول تلقائياً:</p>
-          <textarea id="waRawText" rows="5" placeholder="مثال:&#10;الاسم: Youssef Mostafa&#10;الموبايل: 201001234567&#10;الفئة: VIP&#10;العدد: 2" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200"></textarea>
+          <textarea id="waRawText" rows="5" placeholder="مثال:&#10;الاسم: Youssef Mostafa&#10;الموبايل: 201001234567&#10;الفئة: لاونج / VIP / جولد / سيلفر&#10;العدد: 2" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200"></textarea>
           <button onclick="parseWhatsAppMessage()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-2.5 rounded-xl border border-slate-700">
             استخراج البيانات من الرسالة
           </button>
@@ -85,16 +90,17 @@
             <input id="custName" type="text" placeholder="Youssef Mostafa" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
           </div>
           <div>
-            <label class="block text-xs text-slate-400 mb-1">رقم الواتساب </label>
+            <label class="block text-xs text-slate-400 mb-1">رقم الواتساب (بالكود الدولي مثل 2010...)</label>
             <input id="custPhone" type="text" placeholder="201000000000" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm" />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs text-slate-400 mb-1">فئة التذكرة</label>
               <select id="ticketType" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm">
-                <option value="Regular">Regular</option>
-                <option value="VIP">VIP</option>
-                <option value="Backstage">Backstage</option>
+                <option value="Lounge">لاونج (Lounge)</option>
+                <option value="VIP">في آي بي (VIP)</option>
+                <option value="Gold">جولد (Gold)</option>
+                <option value="Silver">سيلفر (Silver)</option>
               </select>
             </div>
             <div>
@@ -164,6 +170,24 @@
     let html5QrCode = null;
     let isScanningLocked = false;
 
+    const TIER_LABELS = {
+      Lounge: 'لاونج (Lounge)',
+      VIP: 'في آي بي (VIP)',
+      Gold: 'جولد (Gold)',
+      Silver: 'سيلفر (Silver)'
+    };
+
+    const TIER_BADGES = {
+      Lounge: 'bg-purple-500/20 text-purple-300 border border-purple-500/40',
+      VIP: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
+      Gold: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
+      Silver: 'bg-slate-500/20 text-slate-300 border border-slate-500/40'
+    };
+
+    function formatTier(tier) {
+      return TIER_LABELS[tier] || tier || 'Silver';
+    }
+
     document.getElementById('gasUrl').value = localStorage.getItem(GAS_KEY) || '';
 
     function saveGasUrl() {
@@ -197,9 +221,11 @@
         document.getElementById('custPhone').value = phoneMatch[1].replace(/[^\d]/g, '');
       }
 
-      if (/vip/i.test(text)) document.getElementById('ticketType').value = 'VIP';
-      else if (/backstage/i.test(text)) document.getElementById('ticketType').value = 'Backstage';
-      else document.getElementById('ticketType').value = 'Regular';
+      if (/(?:lounge|لاونج)/i.test(text)) document.getElementById('ticketType').value = 'Lounge';
+      else if (/(?:vip|في آي بي|فى اى بى|في اي بي)/i.test(text)) document.getElementById('ticketType').value = 'VIP';
+      else if (/(?:gold|جولد|ذهبي)/i.test(text)) document.getElementById('ticketType').value = 'Gold';
+      else if (/(?:silver|سيلفر|فضي)/i.test(text)) document.getElementById('ticketType').value = 'Silver';
+      else document.getElementById('ticketType').value = 'Lounge';
 
       const qtyMatch = text.match(/(?:العدد|qty|count|تذاكر)[:\s-]*(\d+)/i);
       if (qtyMatch) document.getElementById('ticketQty').value = qtyMatch[1];
@@ -245,12 +271,13 @@
 
       const cleanPhone = String(ticket.phone || '').replace(/[^\d]/g, '');
       const qrUrl = getQrUrl(ticket.id);
+      const tierDisplay = formatTier(ticket.type);
 
       const message =
         `أهلاً بك يا ${ticket.name}\n` +
         `تم تأكيد حجز تذكرتك بنجاح!\n\n` +
         `كود التذكرة: ${ticket.id}\n` +
-        `الفئة: ${ticket.type}\n` +
+        `الفئة: ${tierDisplay}\n` +
         `ملاحظة: هذه التذكرة صالحة للدخول مرة واحدة فقط.\n\n` +
         `رابط الـ QR Code الخاص بدخولك:\n` +
         `${qrUrl}`;
@@ -266,9 +293,10 @@
       const div = document.createElement('div');
       div.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center space-y-3';
       const qrUrl = getQrUrl(ticket.id);
+      const badgeClass = TIER_BADGES[ticket.type] || 'bg-emerald-500/20 text-emerald-300';
 
       div.innerHTML = `
-        <div class="text-xs font-bold text-emerald-400">${ticket.type}</div>
+        <span class="inline-block px-3 py-0.5 rounded-full text-xs font-bold ${badgeClass}">${formatTier(ticket.type)}</span>
         <div class="text-lg font-extrabold">${ticket.name}</div>
         <div class="font-mono text-sm text-slate-300 bg-slate-950 py-1 rounded-lg">${ticket.id}</div>
         <img src="${qrUrl}" alt="${ticket.id}" class="w-40 h-40 mx-auto rounded-xl bg-white p-2" />
@@ -369,12 +397,13 @@
 
     function showScanResult(state, id, name = '', type = '', scanTime = '') {
       const box = document.getElementById('scanResultBox');
+      const tierDisplay = formatTier(type);
       if (state === 'allowed') {
         box.className = 'bg-emerald-950/70 border-2 border-emerald-500 rounded-2xl p-6 flex flex-col justify-center items-center text-center min-h-[320px]';
         box.innerHTML = `
           <div class="text-4xl font-extrabold text-emerald-400 mb-2">مسموح بالدخول</div>
           <div class="text-xl font-bold text-white">${name}</div>
-          <div class="text-sm text-emerald-300 mt-1">${id} • ${type}</div>
+          <div class="text-sm text-emerald-300 mt-1">${id} • ${tierDisplay}</div>
           <div class="mt-4 bg-slate-950/80 px-4 py-2 rounded-xl text-xs text-slate-300">وقت الدخول: ${scanTime}</div>
         `;
       } else if (state === 'used') {
@@ -382,6 +411,7 @@
         box.innerHTML = `
           <div class="text-3xl font-extrabold text-rose-400 mb-2">مرفوض — مستخدمة مسبقاً!</div>
           <div class="text-lg font-bold text-white">${name} (${id})</div>
+          <div class="text-sm text-rose-300 mt-1">${tierDisplay}</div>
           <div class="mt-4 bg-slate-950/80 px-4 py-2 rounded-xl text-xs text-rose-200">تم الدخول بها في: ${scanTime}</div>
         `;
       } else {
@@ -428,7 +458,7 @@
           <td class="p-3 font-mono font-bold">${t.id}</td>
           <td class="p-3">${t.name}</td>
           <td class="p-3">${t.phone || '-'}</td>
-          <td class="p-3">${t.type}</td>
+          <td class="p-3 font-bold">${formatTier(t.type)}</td>
           <td class="p-3">
             <span class="px-2.5 py-1 rounded-full text-xs font-bold ${t.status === 'Used' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}">
               ${t.status}
@@ -450,7 +480,7 @@
 
     function exportCSV() {
       const rows = [['Ticket_ID', 'Name', 'Phone', 'Type', 'Status', 'Scan_Time']];
-      tickets.forEach(t => rows.push([t.id, t.name, t.phone, t.type, t.status, t.scanTime]));
+      tickets.forEach(t => rows.push([t.id, t.name, t.phone, formatTier(t.type), t.status, t.scanTime]));
       const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
